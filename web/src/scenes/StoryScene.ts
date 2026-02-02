@@ -2,6 +2,7 @@ import Phaser from 'phaser'
 import { getState, setState } from '../game/state'
 import { saveProgress } from '../game/storage'
 import { getStoryNode } from '../game/story'
+import { advanceReveal } from '../game/text'
 import type { StoryChoice, StoryNode } from '../game/types'
 
 export class StoryScene extends Phaser.Scene {
@@ -57,7 +58,7 @@ export class StoryScene extends Phaser.Scene {
     })
 
     const hint = this.add
-      .text(this.scale.width - 16, 168, 'Tap or Space', {
+      .text(this.scale.width - 16, 168, 'Tap/Space | A: Auto', {
         fontFamily: 'VT323',
         fontSize: '14px',
         color: '#8aa0b8',
@@ -65,9 +66,20 @@ export class StoryScene extends Phaser.Scene {
       .setOrigin(1, 1)
 
     let choiceTexts: Phaser.GameObjects.Text[] = []
+    let currentLine = ''
+    let visibleChars = 0
+    let lineComplete = false
+    let autoAdvance = false
+    let autoTimerMs = 0
+    const revealSpeed = 40
+    const autoDelayMs = 650
 
     const showLine = () => {
-      text.setText(node.lines[lineIndex])
+      currentLine = node.lines[lineIndex]
+      visibleChars = 0
+      lineComplete = currentLine.length === 0
+      autoTimerMs = 0
+      text.setText('')
     }
 
     const clearChoices = () => {
@@ -110,6 +122,13 @@ export class StoryScene extends Phaser.Scene {
         return
       }
 
+      if (!lineComplete) {
+        visibleChars = currentLine.length
+        lineComplete = true
+        text.setText(currentLine)
+        return
+      }
+
       lineIndex += 1
 
       if (lineIndex < node.lines.length) {
@@ -141,5 +160,29 @@ export class StoryScene extends Phaser.Scene {
     showLine()
     this.input.on('pointerdown', advance)
     this.input.keyboard?.on('keydown-SPACE', advance)
+    this.input.keyboard?.on('keydown-A', () => {
+      autoAdvance = !autoAdvance
+      hint.setText(autoAdvance ? 'Auto ON | Tap/Space' : 'Tap/Space | A: Auto')
+    })
+
+    this.events.on('update', (_time: number, delta: number) => {
+      if (lineComplete || choiceTexts.length > 0) {
+        if (autoAdvance && lineComplete && choiceTexts.length === 0) {
+          autoTimerMs += delta
+          if (autoTimerMs >= autoDelayMs) {
+            autoTimerMs = 0
+            advance()
+          }
+        }
+        return
+      }
+
+      visibleChars = advanceReveal(visibleChars, delta, revealSpeed, currentLine.length)
+      const visibleText = currentLine.slice(0, Math.floor(visibleChars))
+      text.setText(visibleText)
+      if (visibleText.length >= currentLine.length) {
+        lineComplete = true
+      }
+    })
   }
 }
