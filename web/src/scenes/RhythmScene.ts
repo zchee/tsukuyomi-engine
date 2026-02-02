@@ -18,7 +18,10 @@ export class RhythmScene extends Phaser.Scene {
   private scoreText?: Phaser.GameObjects.Text
   private feedbackText?: Phaser.GameObjects.Text
   private readyText?: Phaser.GameObjects.Text
+  private helpText?: Phaser.GameObjects.Text
+  private pausedText?: Phaser.GameObjects.Text
   private started = false
+  private paused = false
   private beatmap = getBeatmap()
 
   constructor() {
@@ -50,6 +53,14 @@ export class RhythmScene extends Phaser.Scene {
       })
       .setOrigin(0.5)
 
+    this.helpText = this.add
+      .text(this.scale.width - 12, 12, 'Space/Tap | P: Pause | Esc: Exit', {
+        fontFamily: 'VT323',
+        fontSize: '12px',
+        color: '#8aa0b8',
+      })
+      .setOrigin(1, 0)
+
     this.readyText = this.add
       .text(this.scale.width * 0.5, this.scale.height * 0.5, 'Tap or Space to start', {
         fontFamily: 'VT323',
@@ -58,7 +69,19 @@ export class RhythmScene extends Phaser.Scene {
       })
       .setOrigin(0.5)
 
+    this.pausedText = this.add
+      .text(this.scale.width * 0.5, this.scale.height * 0.5, 'PAUSED', {
+        fontFamily: 'VT323',
+        fontSize: '24px',
+        color: '#f2d77c',
+      })
+      .setOrigin(0.5)
+      .setVisible(false)
+
     this.input.on('pointerdown', () => {
+      if (this.paused) {
+        return
+      }
       if (!this.started) {
         this.startRhythm()
         return
@@ -67,16 +90,30 @@ export class RhythmScene extends Phaser.Scene {
     })
 
     this.input.keyboard?.on('keydown-SPACE', () => {
+      if (this.paused) {
+        return
+      }
       if (!this.started) {
         this.startRhythm()
         return
       }
       this.tryHit()
     })
+
+    this.input.keyboard?.on('keydown-P', () => {
+      if (!this.started) {
+        return
+      }
+      this.togglePause()
+    })
+
+    this.input.keyboard?.on('keydown-ESC', () => {
+      this.scene.start('TitleScene')
+    })
   }
 
   update(): void {
-    if (!this.started || !this.audioContext || !this.graphics) {
+    if (!this.started || this.paused || !this.audioContext || !this.graphics) {
       return
     }
 
@@ -129,6 +166,20 @@ export class RhythmScene extends Phaser.Scene {
 
       osc.start(time)
       osc.stop(time + 0.09)
+    }
+  }
+
+  private togglePause(): void {
+    this.paused = !this.paused
+    if (this.pausedText) {
+      this.pausedText.setVisible(this.paused)
+    }
+    if (this.audioContext) {
+      if (this.paused) {
+        void this.audioContext.suspend()
+      } else {
+        void this.audioContext.resume()
+      }
     }
   }
 
