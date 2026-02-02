@@ -1,0 +1,26 @@
+{
+    "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+    // https://docs.renovatebot.com/presets-config
+    "extends": [
+        "config:recommended",
+        "schedule:daily",
+        "preview:dockerCompose",
+        "preview:dockerVersions",
+    ],
+    // https://docs.renovatebot.com/configuration-options/
+    "semanticCommits": true,
+    "postUpdateOptions": [
+        "gomodTidy",
+    ],
+    "commitMessagePrefix": "go.mod: ",
+    "commitMessageAction": "update",
+    "groupName": "deps",
+    "ignoreDeps": [],
+    "ignorePaths": [],
+    "packageRules": [],
+    "force": {
+        "constraints": {
+            "go": "1.23"
+        }
+    }
+}
