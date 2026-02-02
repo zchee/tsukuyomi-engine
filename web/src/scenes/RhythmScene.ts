@@ -1,6 +1,7 @@
 import Phaser from 'phaser'
 import { getBeatmap } from '../game/beatmap'
 import { GOOD_WINDOW_MS, HIT_LINE_Y, NOTE_TRAVEL_MS } from '../game/constants'
+import { triggerHitHaptics } from '../game/haptics'
 import { evaluateHit, summarizeHits } from '../game/rhythm'
 import { getSettings } from '../game/settings'
 import { getState, setState } from '../game/state'
@@ -228,6 +229,7 @@ export class RhythmScene extends Phaser.Scene {
     this.hitResults.push(result)
     this.updateFeedback(result.grade)
     this.updateScoreText()
+    void triggerHitHaptics(result.grade)
   }
 
   private updateCountdown(currentMs: number): void {
@@ -258,6 +260,7 @@ export class RhythmScene extends Phaser.Scene {
         })
         this.updateFeedback('miss')
         this.updateScoreText()
+        void triggerHitHaptics('miss')
       }
     })
   }
