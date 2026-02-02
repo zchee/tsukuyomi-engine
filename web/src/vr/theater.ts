@@ -1,7 +1,9 @@
 import * as THREE from 'three'
 import { VRButton } from 'three/examples/jsm/webxr/VRButton.js'
+import { XRControllerModelFactory } from 'three/examples/jsm/webxr/XRControllerModelFactory.js'
 import { computeScreenDimensions } from './geometry'
 import { dispatchPointerEvent } from './input'
+import { pulseHaptics } from './haptics'
 
 export type VrTheaterConfig = {
   canvas: HTMLCanvasElement
@@ -147,13 +149,21 @@ export function createVrTheater(
   const controllerLines: Array<{
     controller: XRController
     line: THREE.Line
-    onSelectStart: () => void
-    onSelectEnd: () => void
+    onSelectStart: (event: XRSelectEvent) => void
+    onSelectEnd: (event: XRSelectEvent) => void
   }> = []
 
+  const controllerGrips: THREE.Group[] = []
+  const canUseControllerModels = typeof navigator !== 'undefined' && 'xr' in navigator
+  const controllerModelFactory = canUseControllerModels ? new XRControllerModelFactory() : null
+
   type XRController = THREE.Group & {
-    addEventListener: (type: 'selectstart' | 'selectend', listener: () => void) => void
-    removeEventListener: (type: 'selectstart' | 'selectend', listener: () => void) => void
+    addEventListener: (type: 'selectstart' | 'selectend', listener: (event: XRSelectEvent) => void) => void
+    removeEventListener: (type: 'selectstart' | 'selectend', listener: (event: XRSelectEvent) => void) => void
+  }
+
+  type XRSelectEvent = {
+    data?: XRInputSource
   }
 
   const controllerRayMaterial = new THREE.LineBasicMaterial({ color: 0x7cf2b4 })
@@ -168,18 +178,20 @@ export function createVrTheater(
     line.scale.z = 4
     controller.add(line)
 
-    const onSelectStart = () => {
+    const onSelectStart = (event: XRSelectEvent) => {
       const hit = getControllerIntersection(controller)
       if (hit?.uv) {
         dispatchPointerEvent(config.canvas, 'pointerdown', hit.uv)
       }
+      void pulseHaptics(event.data?.gamepad, 0.6, 40)
     }
 
-    const onSelectEnd = () => {
+    const onSelectEnd = (event: XRSelectEvent) => {
       const hit = getControllerIntersection(controller)
       if (hit?.uv) {
         dispatchPointerEvent(config.canvas, 'pointerup', hit.uv)
       }
+      void pulseHaptics(event.data?.gamepad, 0.2, 20)
     }
 
     controller.addEventListener('selectstart', onSelectStart)
@@ -187,6 +199,13 @@ export function createVrTheater(
 
     scene.add(controller)
     controllerLines.push({ controller, line, onSelectStart, onSelectEnd })
+
+    if (controllerModelFactory) {
+      const grip = renderer.xr.getControllerGrip(i)
+      grip.add(controllerModelFactory.createControllerModel(grip))
+      scene.add(grip)
+      controllerGrips.push(grip)
+    }
   }
 
   const resize = () => {
@@ -276,6 +295,19 @@ export function createVrTheater(
       line.geometry.dispose()
     }
     controllerRayMaterial.dispose()
+    for (const grip of controllerGrips) {
+      grip.traverse((child) => {
+        if (child instanceof THREE.Mesh) {
+          child.geometry.dispose()
+          if (Array.isArray(child.material)) {
+            child.material.forEach((material) => material.dispose())
+          } else {
+            child.material.dispose()
+          }
+        }
+      })
+      grip.removeFromParent()
+    }
 
     screenTexture.dispose()
     screenGeometry.dispose()
