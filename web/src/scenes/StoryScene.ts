@@ -1,8 +1,10 @@
 import Phaser from 'phaser'
+import { appendHistory } from '../game/history'
+import { getSettings, saveSettings, setSettings } from '../game/settings'
 import { getState, setState } from '../game/state'
 import { saveProgress } from '../game/storage'
 import { getStoryNode } from '../game/story'
-import { advanceReveal } from '../game/text'
+import { advanceReveal, charsPerSecondFromSpeed } from '../game/text'
 import type { StoryChoice, StoryNode } from '../game/types'
 
 export class StoryScene extends Phaser.Scene {
@@ -57,21 +59,56 @@ export class StoryScene extends Phaser.Scene {
       wordWrap: { width: this.scale.width - 40 },
     })
 
+    const settings = getSettings()
+    let autoAdvance = settings.autoAdvance
+
     const hint = this.add
-      .text(this.scale.width - 16, 168, 'Tap/Space | A: Auto', {
+      .text(
+        this.scale.width - 16,
+        168,
+        autoAdvance ? 'Auto ON | Tap/Space | L: Log' : 'Tap/Space | A: Auto | L: Log',
+        {
+          fontFamily: 'VT323',
+          fontSize: '14px',
+          color: '#8aa0b8',
+        }
+      )
+      .setOrigin(1, 1)
+
+    const logPanel = this.add.graphics()
+    logPanel.fillStyle(0x05070b, 0.92)
+    logPanel.fillRoundedRect(10, 20, this.scale.width - 20, 150, 6)
+    logPanel.lineStyle(2, 0x1f2937, 1)
+    logPanel.strokeRoundedRect(10, 20, this.scale.width - 20, 150, 6)
+    logPanel.setVisible(false)
+
+    const logTitle = this.add
+      .text(20, 28, 'LOG', {
+        fontFamily: 'VT323',
+        fontSize: '16px',
+        color: '#f2d77c',
+      })
+      .setVisible(false)
+
+    const logText = this.add
+      .text(20, 48, '', {
         fontFamily: 'VT323',
         fontSize: '14px',
-        color: '#8aa0b8',
+        color: '#e8f0ff',
+        wordWrap: { width: this.scale.width - 40 },
       })
-      .setOrigin(1, 1)
+      .setVisible(false)
 
     let choiceTexts: Phaser.GameObjects.Text[] = []
     let currentLine = ''
     let visibleChars = 0
     let lineComplete = false
-    let autoAdvance = false
     let autoTimerMs = 0
-    const revealSpeed = 40
+    let hasRecordedLine = false
+    let history: string[] = []
+    let logOpen = false
+    const maxHistoryLines = 8
+    const revealSpeed = charsPerSecondFromSpeed(settings.textSpeed)
     const autoDelayMs = 650
 
     const showLine = () => {
@@ -79,7 +116,17 @@ export class StoryScene extends Phaser.Scene {
       visibleChars = 0
       lineComplete = currentLine.length === 0
       autoTimerMs = 0
+      hasRecordedLine = false
       text.setText('')
+    }
+
+    const recordHistory = (line: string) => {
+      if (hasRecordedLine) {
+        return
+      }
+      history = appendHistory(history, line, maxHistoryLines)
+      hasRecordedLine = true
+      logText.setText(history.join('\n'))
     }
 
     const clearChoices = () => {
@@ -105,6 +152,8 @@ export class StoryScene extends Phaser.Scene {
         choiceText.on('pointerdown', () => {
           setState({ choiceId: choice.id, storyNodeId: choice.next })
           saveProgress(getState())
+          history = appendHistory(history, `> ${choice.label}`, maxHistoryLines)
+          logText.setText(history.join('\n'))
           node = getStoryNode(choice.next)
           lineIndex = 0
           hint.setVisible(true)
@@ -118,6 +167,9 @@ export class StoryScene extends Phaser.Scene {
     }
 
     const advance = () => {
+      if (logOpen) {
+        return
+      }
       if (choiceTexts.length > 0) {
         return
       }
@@ -126,9 +178,11 @@ export class StoryScene extends Phaser.Scene {
         visibleChars = currentLine.length
         lineComplete = true
         text.setText(currentLine)
+        recordHistory(currentLine)
         return
       }
 
+      recordHistory(currentLine)
       lineIndex += 1
 
       if (lineIndex < node.lines.length) {
@@ -162,10 +216,24 @@ export class StoryScene extends Phaser.Scene {
     this.input.keyboard?.on('keydown-SPACE', advance)
     this.input.keyboard?.on('keydown-A', () => {
       autoAdvance = !autoAdvance
-      hint.setText(autoAdvance ? 'Auto ON | Tap/Space' : 'Tap/Space | A: Auto')
+      const next = setSettings({ autoAdvance })
+      saveSettings(next)
+      hint.setText(
+        next.autoAdvance ? 'Auto ON | Tap/Space | L: Log' : 'Tap/Space | A: Auto | L: Log'
+      )
+    })
+
+    this.input.keyboard?.on('keydown-L', () => {
+      logOpen = !logOpen
+      logPanel.setVisible(logOpen)
+      logTitle.setVisible(logOpen)
+      logText.setVisible(logOpen)
     })
 
     this.events.on('update', (_time: number, delta: number) => {
+      if (logOpen) {
+        return
+      }
       if (lineComplete || choiceTexts.length > 0) {
         if (autoAdvance && lineComplete && choiceTexts.length === 0) {
           autoTimerMs += delta
@@ -182,6 +250,7 @@ export class StoryScene extends Phaser.Scene {
       text.setText(visibleText)
       if (visibleText.length >= currentLine.length) {
         lineComplete = true
+        recordHistory(currentLine)
       }
     })
   }
