@@ -23,7 +23,10 @@ import (
 )
 
 type Config struct {
-	StaticDir string
+	StaticDir         string
+	ChatEnabled       bool
+	ChatMaxMessageLen int
+	ChatMaxNameLen    int
 }
 
 func NewMux(cfg Config, logger *slog.Logger) *http.ServeMux {
@@ -33,6 +36,12 @@ func NewMux(cfg Config, logger *slog.Logger) *http.ServeMux {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", healthHandler)
+
+	if cfg.ChatEnabled {
+		chatHub := newChatHub()
+		chatHandler := newChatHandler(chatHub, logger, cfg.ChatMaxMessageLen, cfg.ChatMaxNameLen)
+		mux.Handle("/ws", chatHandler)
+	}
 
 	if cfg.StaticDir != "" {
 		info, err := os.Stat(cfg.StaticDir)
