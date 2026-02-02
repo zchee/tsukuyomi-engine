@@ -30,12 +30,15 @@ const config: Phaser.Types.Core.GameConfig = {
 }
 
 const game = new Phaser.Game(config)
-const chatClient = installChat({ container: document.body })
+const chatEvents = new EventTarget()
+const chatClient = installChat({ container: document.body, eventTarget: chatEvents })
 const vrLauncher = installVrLauncher({
   canvas: game.canvas,
   container: document.body,
   gameWidth: GAME_WIDTH,
   gameHeight: GAME_HEIGHT,
+  chatEventTarget: chatEvents,
+  chatSend: chatClient?.send,
 })
 
 window.addEventListener('beforeunload', () => {

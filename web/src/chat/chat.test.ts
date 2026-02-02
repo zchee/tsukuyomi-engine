@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildWebSocketURL, installChat, parseInput } from './chat'
+import { buildWebSocketURL, chatEventName, chatReactions, installChat, parseInput } from './chat'
 
 type Listener = (event: MessageEvent) => void
 
@@ -116,5 +116,79 @@ describe('installChat', () => {
     client?.dispose()
     expect(container.querySelector('.chat-panel')).toBeNull()
     expect(socket.closed).toBe(true)
+  })
+
+  it('dispatches chat events on the configured event target', () => {
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+
+    const socket = new FakeSocket()
+    const eventTarget = new EventTarget()
+    const received: unknown[] = []
+    eventTarget.addEventListener(chatEventName, (event) => {
+      received.push((event as CustomEvent).detail)
+    })
+
+    const client = installChat({
+      container,
+      name: 'Alice',
+      socketFactory: () => socket,
+      url: 'ws://localhost/ws',
+      eventTarget,
+    })
+
+    socket.emit(
+      'message',
+      JSON.stringify({
+        type: 'welcome',
+        from: { id: '1', name: 'Alice' },
+        users: [{ id: '1', name: 'Alice' }],
+      })
+    )
+
+    expect(received.length).toBe(1)
+    client?.dispose()
+  })
+
+  it('sends reaction messages from reaction buttons', () => {
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+
+    const socket = new FakeSocket()
+    const client = installChat({
+      container,
+      socketFactory: () => socket,
+      url: 'ws://localhost/ws',
+    })
+
+    const buttons = container.querySelectorAll('.chat-reaction')
+    expect(buttons.length).toBe(chatReactions.length)
+
+    const firstButton = buttons[0] as HTMLButtonElement
+    firstButton.click()
+
+    expect(socket.sent.length).toBe(1)
+    expect(JSON.parse(socket.sent[0])).toEqual({ type: 'chat', body: chatReactions[0].body })
+
+    client?.dispose()
+  })
+
+  it('sends messages via the client send helper', () => {
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+
+    const socket = new FakeSocket()
+    const client = installChat({
+      container,
+      socketFactory: () => socket,
+      url: 'ws://localhost/ws',
+    })
+
+    client?.send({ type: 'chat', body: 'hello' })
+
+    expect(socket.sent.length).toBe(1)
+    expect(JSON.parse(socket.sent[0])).toEqual({ type: 'chat', body: 'hello' })
+
+    client?.dispose()
   })
 })

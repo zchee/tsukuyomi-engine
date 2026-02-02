@@ -3,10 +3,7 @@ export type ChatClientConfig = {
   name?: string
   url?: string
   socketFactory?: (url: string) => WebSocketLike
-}
-
-export type ChatClient = {
-  dispose: () => void
+  eventTarget?: EventTarget
 }
 
 type WebSocketLike = {
@@ -16,23 +13,30 @@ type WebSocketLike = {
   removeEventListener: (type: string, listener: (event: MessageEvent) => void) => void
 }
 
-type ClientMessage = {
+export type ChatClientMessage = {
   type: 'chat' | 'name'
   body: string
 }
 
-type Presence = {
+export const chatEventName = 'tsukuyomi:chat'
+
+export type ChatPresence = {
   id: string
   name: string
 }
 
-type ServerEvent = {
+export type ChatEvent = {
   type: 'welcome' | 'presence' | 'chat'
   action?: 'join' | 'leave' | 'rename'
-  from?: Presence
+  from?: ChatPresence
   body?: string
-  users?: Presence[]
+  users?: ChatPresence[]
   at?: string
+}
+
+export type ChatClient = {
+  dispose: () => void
+  send: (message: ChatClientMessage) => void
 }
 
 export function installChat(config: ChatClientConfig): ChatClient | null {
@@ -65,6 +69,9 @@ export function installChat(config: ChatClientConfig): ChatClient | null {
   const messages = document.createElement('div')
   messages.className = 'chat-messages'
 
+  const reactions = document.createElement('div')
+  reactions.className = 'chat-reactions'
+
   const form = document.createElement('form')
   form.className = 'chat-input'
 
@@ -78,17 +85,20 @@ export function installChat(config: ChatClientConfig): ChatClient | null {
   sendButton.textContent = 'Send'
 
   form.append(input, sendButton)
-  root.append(header, userList, messages, form)
+  root.append(header, userList, messages, reactions, form)
   config.container.appendChild(root)
 
   const socketFactory = config.socketFactory ?? ((url: string) => new WebSocket(url))
   const url = config.url ?? buildWebSocketURL(window.location, config.name)
   const socket = socketFactory(url)
+  const eventTarget =
+    config.eventTarget ?? (typeof window === 'object' ? (window as unknown as EventTarget) : null)
 
-  const users = new Map<string, Presence>()
+  const users = new Map<string, ChatPresence>()
   let disposed = false
+  const reactionListeners = new Map<HTMLButtonElement, () => void>()
 
-  const updateUsers = (list: Presence[]) => {
+  const updateUsers = (list: ChatPresence[]) => {
     users.clear()
     list.forEach((user) => users.set(user.id, user))
     renderUsers(userList, usersCount, users)
@@ -104,7 +114,7 @@ export function installChat(config: ChatClientConfig): ChatClient | null {
     messages.scrollTop = messages.scrollHeight
   }
 
-  const handleEvent = (event: ServerEvent) => {
+  const handleEvent = (event: ChatEvent) => {
     if (event.type === 'welcome') {
       if (event.users) {
         updateUsers(event.users)
@@ -113,6 +123,7 @@ export function installChat(config: ChatClientConfig): ChatClient | null {
         addSystemMessage(`You are ${event.from.name}`)
       }
       status.textContent = 'Online'
+      emitChatEvent(eventTarget, event)
       return
     }
 
@@ -133,11 +144,13 @@ export function installChat(config: ChatClientConfig): ChatClient | null {
         renderUsers(userList, usersCount, users)
         addSystemMessage(`${previous} is now ${event.from.name}`)
       }
+      emitChatEvent(eventTarget, event)
       return
     }
 
     if (event.type === 'chat' && event.from && event.body) {
       addChatMessage(event.from.name, event.body)
+      emitChatEvent(eventTarget, event)
     }
   }
 
@@ -158,6 +171,16 @@ export function installChat(config: ChatClientConfig): ChatClient | null {
     status.textContent = 'Offline'
   }
 
+  const sendMessage = (message: ChatClientMessage) => {
+    if (disposed) {
+      return
+    }
+    socket.send(JSON.stringify(message))
+    if (message.type === 'name') {
+      localStorage.setItem('luna-loop-name', message.body)
+    }
+  }
+
   const onSubmit = (event: Event) => {
     event.preventDefault()
     const value = input.value
@@ -166,11 +189,21 @@ export function installChat(config: ChatClientConfig): ChatClient | null {
       input.value = ''
       return
     }
-    socket.send(JSON.stringify(message))
-    if (message.type === 'name') {
-      localStorage.setItem('luna-loop-name', message.body)
-    }
+    sendMessage(message)
     input.value = ''
+  }
+
+  for (const reaction of chatReactions) {
+    const button = document.createElement('button')
+    button.type = 'button'
+    button.className = 'chat-reaction'
+    button.textContent = reaction.label
+    const handler = () => {
+      sendMessage({ type: 'chat', body: reaction.body })
+    }
+    button.addEventListener('click', handler)
+    reactionListeners.set(button, handler)
+    reactions.appendChild(button)
   }
 
   socket.addEventListener('message', onMessage)
@@ -188,9 +221,13 @@ export function installChat(config: ChatClientConfig): ChatClient | null {
       socket.removeEventListener('open', onOpen)
       socket.removeEventListener('close', onClose)
       form.removeEventListener('submit', onSubmit)
+      reactionListeners.forEach((handler, button) => {
+        button.removeEventListener('click', handler)
+      })
       socket.close()
       root.remove()
     },
+    send: sendMessage,
   }
 }
 
@@ -207,7 +244,7 @@ export function buildWebSocketURL(location: Location, name?: string): string {
   return url.toString()
 }
 
-export function parseInput(input: string): ClientMessage | null {
+export function parseInput(input: string): ChatClientMessage | null {
   const trimmed = input.trim()
   if (!trimmed) {
     return null
@@ -224,7 +261,7 @@ export function parseInput(input: string): ClientMessage | null {
   return { type: 'chat', body: trimmed }
 }
 
-function renderUsers(list: HTMLUListElement, count: HTMLElement, users: Map<string, Presence>): void {
+function renderUsers(list: HTMLUListElement, count: HTMLElement, users: Map<string, ChatPresence>): void {
   list.innerHTML = ''
   for (const user of users.values()) {
     const item = document.createElement('li')
@@ -250,10 +287,25 @@ function renderMessage(author: string, body: string): HTMLElement {
   return row
 }
 
-function safeParse(raw: string): ServerEvent | null {
+function safeParse(raw: string): ChatEvent | null {
   try {
-    return JSON.parse(raw) as ServerEvent
+    return JSON.parse(raw) as ChatEvent
   } catch {
     return null
   }
 }
+
+function emitChatEvent(target: EventTarget | null, event: ChatEvent): void {
+  if (!target) {
+    return
+  }
+  const customEvent = new CustomEvent<ChatEvent>(chatEventName, { detail: event })
+  target.dispatchEvent(customEvent)
+}
+
+export const chatReactions = [
+  { label: 'Wave', body: '*wave*' },
+  { label: 'Clap', body: '*clap*' },
+  { label: 'Cheer', body: '*cheer*' },
+  { label: 'Encore', body: '*encore*' },
+]

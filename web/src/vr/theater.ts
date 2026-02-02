@@ -1,6 +1,14 @@
 import * as THREE from 'three'
 import { VRButton } from 'three/examples/jsm/webxr/VRButton.js'
 import { XRControllerModelFactory } from 'three/examples/jsm/webxr/XRControllerModelFactory.js'
+import {
+  chatEventName,
+  chatReactions,
+  type ChatClientMessage,
+  type ChatEvent,
+  type ChatPresence,
+} from '../chat/chat'
+import { createAudienceRing } from './audience'
 import { computeScreenDimensions } from './geometry'
 import { dispatchPointerEvent } from './input'
 import { pulseHaptics } from './haptics'
@@ -11,6 +19,8 @@ export type VrTheaterConfig = {
   gameWidth: number
   gameHeight: number
   buttonContainer?: HTMLElement
+  chatEventTarget?: EventTarget
+  chatSend?: (message: ChatClientMessage) => void
 }
 
 export type VrTheaterDependencies = {
@@ -135,6 +145,10 @@ export function createVrTheater(
   frame.rotation.copy(screenMesh.rotation)
   scene.add(frame)
 
+  const audience = createAudienceRing({ radius: 1.7 })
+  audience.group.position.set(0, 1.05, -2.2)
+  scene.add(audience.group)
+
   const reticleMaterial = new THREE.MeshBasicMaterial({
     color: 0x7cf2b4,
     transparent: true,
@@ -146,11 +160,15 @@ export function createVrTheater(
 
   const raycaster = new THREE.Raycaster()
   const tempMatrix = new THREE.Matrix4()
+  let reactionIndex = 0
+  let lastReactionAt = 0
+  const reactionCooldownMs = 250
   const controllerLines: Array<{
     controller: XRController
     line: THREE.Line
     onSelectStart: (event: XRSelectEvent) => void
     onSelectEnd: (event: XRSelectEvent) => void
+    onSqueezeStart: (event: XRSelectEvent) => void
   }> = []
 
   const controllerGrips: THREE.Group[] = []
@@ -158,8 +176,14 @@ export function createVrTheater(
   const controllerModelFactory = canUseControllerModels ? new XRControllerModelFactory() : null
 
   type XRController = THREE.Group & {
-    addEventListener: (type: 'selectstart' | 'selectend', listener: (event: XRSelectEvent) => void) => void
-    removeEventListener: (type: 'selectstart' | 'selectend', listener: (event: XRSelectEvent) => void) => void
+    addEventListener: (
+      type: 'selectstart' | 'selectend' | 'squeezestart',
+      listener: (event: XRSelectEvent) => void
+    ) => void
+    removeEventListener: (
+      type: 'selectstart' | 'selectend' | 'squeezestart',
+      listener: (event: XRSelectEvent) => void
+    ) => void
   }
 
   type XRSelectEvent = {
@@ -194,11 +218,30 @@ export function createVrTheater(
       void pulseHaptics(event.data?.gamepad, 0.2, 20)
     }
 
+    const onSqueezeStart = (event: XRSelectEvent) => {
+      if (!config.chatSend || chatReactions.length === 0) {
+        return
+      }
+      const now =
+        typeof performance === 'object' && performance && typeof performance.now === 'function'
+          ? performance.now()
+          : Date.now()
+      if (now - lastReactionAt < reactionCooldownMs) {
+        return
+      }
+      lastReactionAt = now
+      const reaction = chatReactions[reactionIndex % chatReactions.length]
+      reactionIndex += 1
+      config.chatSend({ type: 'chat', body: reaction.body })
+      void pulseHaptics(event.data?.gamepad, 0.4, 30)
+    }
+
     controller.addEventListener('selectstart', onSelectStart)
     controller.addEventListener('selectend', onSelectEnd)
+    controller.addEventListener('squeezestart', onSqueezeStart)
 
     scene.add(controller)
-    controllerLines.push({ controller, line, onSelectStart, onSelectEnd })
+    controllerLines.push({ controller, line, onSelectStart, onSelectEnd, onSqueezeStart })
 
     if (controllerModelFactory) {
       const grip = renderer.xr.getControllerGrip(i)
@@ -206,6 +249,48 @@ export function createVrTheater(
       scene.add(grip)
       controllerGrips.push(grip)
     }
+  }
+
+  const audienceUsers = new Map<string, ChatPresence>()
+  const chatEventTarget =
+    config.chatEventTarget ?? (typeof window === 'object' ? (window as unknown as EventTarget) : null)
+
+  const syncAudience = () => {
+    audience.updateUsers([...audienceUsers.values()])
+  }
+
+  const onChatEvent = (event: Event) => {
+    const detail = (event as CustomEvent<ChatEvent>).detail
+    if (!detail) {
+      return
+    }
+    if (detail.type === 'welcome') {
+      audienceUsers.clear()
+      detail.users?.forEach((user) => audienceUsers.set(user.id, user))
+      syncAudience()
+      return
+    }
+    if (detail.type === 'presence' && detail.from) {
+      if (detail.action === 'join' || detail.action === 'rename') {
+        audienceUsers.set(detail.from.id, detail.from)
+      }
+      if (detail.action === 'leave') {
+        audienceUsers.delete(detail.from.id)
+      }
+      syncAudience()
+      return
+    }
+    if (detail.type === 'chat' && detail.from) {
+      const now =
+        typeof performance === 'object' && performance && typeof performance.now === 'function'
+          ? performance.now()
+          : Date.now()
+      audience.pulse(detail.from.id, now)
+    }
+  }
+
+  if (chatEventTarget) {
+    chatEventTarget.addEventListener(chatEventName, onChatEvent as EventListener)
   }
 
   const resize = () => {
@@ -222,6 +307,11 @@ export function createVrTheater(
     screenTexture.needsUpdate = true
     stars.rotation.y += 0.0005
     stars.rotation.x += 0.0002
+    const now =
+      typeof performance === 'object' && performance && typeof performance.now === 'function'
+        ? performance.now()
+        : Date.now()
+    audience.tick(now)
 
     let activeHit: THREE.Intersection | null = null
     for (const { controller, line } of controllerLines) {
@@ -288,10 +378,14 @@ export function createVrTheater(
     renderer.xr.removeEventListener('sessionstart', onSessionStart)
     renderer.xr.removeEventListener('sessionend', onSessionEnd)
     window.removeEventListener('resize', resize)
+    if (chatEventTarget) {
+      chatEventTarget.removeEventListener(chatEventName, onChatEvent as EventListener)
+    }
 
-    for (const { controller, line, onSelectStart, onSelectEnd } of controllerLines) {
+    for (const { controller, line, onSelectStart, onSelectEnd, onSqueezeStart } of controllerLines) {
       controller.removeEventListener('selectstart', onSelectStart)
       controller.removeEventListener('selectend', onSelectEnd)
+      controller.removeEventListener('squeezestart', onSqueezeStart)
       line.geometry.dispose()
     }
     controllerRayMaterial.dispose()
@@ -316,6 +410,8 @@ export function createVrTheater(
     glowMaterial.dispose()
     frame.geometry.dispose()
     frameMaterial.dispose()
+    audience.dispose()
+    audience.group.removeFromParent()
     starGeometry.dispose()
     starMaterial.dispose()
     nebula.geometry.dispose()
