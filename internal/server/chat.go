@@ -27,14 +27,16 @@ import (
 	"sync"
 	"time"
 
+	"github.com/coder/websocket"
 	"github.com/go-json-experiment/json"
-	"nhooyr.io/websocket"
 )
 
 const (
-	defaultMaxMessageLen = 280
-	defaultMaxNameLen    = 24
-	sendBufferSize       = 16
+	defaultMaxMessageLen      = 280
+	defaultMaxNameLen         = 24
+	defaultRateLimitPerSecond = 3
+	defaultRateLimitBurst     = 6
+	sendBufferSize            = 16
 )
 
 type chatHandler struct {
@@ -42,6 +44,8 @@ type chatHandler struct {
 	logger        *slog.Logger
 	maxMessageLen int
 	maxNameLen    int
+	ratePerSecond float64
+	burst         float64
 }
 
 type chatHub struct {
@@ -75,7 +79,7 @@ type presence struct {
 	Name string `json:"name,omitempty"`
 }
 
-func newChatHandler(hub *chatHub, logger *slog.Logger, maxMessageLen int, maxNameLen int) *chatHandler {
+func newChatHandler(hub *chatHub, logger *slog.Logger, maxMessageLen int, maxNameLen int, ratePerSecond float64, burst float64) *chatHandler {
 	if logger == nil {
 		logger = slog.Default()
 	}
@@ -85,11 +89,19 @@ func newChatHandler(hub *chatHub, logger *slog.Logger, maxMessageLen int, maxNam
 	if maxNameLen <= 0 {
 		maxNameLen = defaultMaxNameLen
 	}
+	if ratePerSecond <= 0 {
+		ratePerSecond = defaultRateLimitPerSecond
+	}
+	if burst <= 0 {
+		burst = defaultRateLimitBurst
+	}
 	return &chatHandler{
 		hub:           hub,
 		logger:        logger,
 		maxMessageLen: maxMessageLen,
 		maxNameLen:    maxNameLen,
+		ratePerSecond: ratePerSecond,
+		burst:         burst,
 	}
 }
 
@@ -102,6 +114,7 @@ func (h *chatHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	conn, err := websocket.Accept(w, r, nil)
 	if err != nil {
+		incChatErrors()
 		h.logger.Warn("websocket accept failed", "err", err)
 		return
 	}
@@ -124,6 +137,8 @@ func (h *chatHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	go client.writeLoop(ctx, h.logger)
 
+	rateLimiter := newRateLimiter(h.ratePerSecond, h.burst, time.Now())
+
 	client.enqueue(serverEvent{
 		Type:  "welcome",
 		From:  client.presence(),
@@ -144,6 +159,7 @@ func (h *chatHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			if errors.Is(err, context.Canceled) || websocket.CloseStatus(err) != -1 {
 				return
 			}
+			incChatErrors()
 			h.logger.Warn("websocket read failed", "err", err)
 			return
 		}
@@ -154,7 +170,13 @@ func (h *chatHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		var msg clientMessage
 		if err := json.Unmarshal(data, &msg); err != nil {
+			incChatErrors()
 			h.logger.Warn("invalid client message", "err", err)
+			continue
+		}
+
+		if !rateLimiter.allow(time.Now()) {
+			incChatRateLimited()
 			continue
 		}
 
@@ -164,6 +186,7 @@ func (h *chatHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			if !ok {
 				continue
 			}
+			incChatMessages()
 			h.hub.broadcast(serverEvent{
 				Type: "chat",
 				From: client.presence(),
@@ -203,6 +226,7 @@ func (c *chatClient) writeLoop(ctx context.Context, logger *slog.Logger) {
 	for event := range c.send {
 		payload, err := json.Marshal(event)
 		if err != nil {
+			incChatErrors()
 			logger.Warn("failed to encode event", "err", err)
 			continue
 		}
@@ -211,6 +235,7 @@ func (c *chatClient) writeLoop(ctx context.Context, logger *slog.Logger) {
 		err = c.conn.Write(writeCtx, websocket.MessageText, payload)
 		cancel()
 		if err != nil {
+			incChatErrors()
 			logger.Warn("failed to write websocket message", "err", err)
 			return
 		}
@@ -225,6 +250,7 @@ func (h *chatHub) register(client *chatClient) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	h.clients[client.id] = client
+	incChatConnections()
 }
 
 func (h *chatHub) unregister(id string) {
@@ -236,6 +262,7 @@ func (h *chatHub) unregister(id string) {
 	h.mu.Unlock()
 
 	if ok {
+		decChatConnections()
 		close(client.send)
 		h.broadcast(serverEvent{
 			Type:   "presence",
@@ -310,4 +337,50 @@ func truncateRunes(value string, maxLen int) string {
 		return value
 	}
 	return string(runes[:maxLen])
+}
+
+type rateLimiter struct {
+	rate   float64
+	burst  float64
+	tokens float64
+	last   time.Time
+}
+
+func newRateLimiter(rate float64, burst float64, now time.Time) rateLimiter {
+	if rate <= 0 {
+		rate = 1
+	}
+	if burst <= 0 {
+		burst = 1
+	}
+	return rateLimiter{
+		rate:   rate,
+		burst:  burst,
+		tokens: burst,
+		last:   now,
+	}
+}
+
+func (r *rateLimiter) allow(now time.Time) bool {
+	elapsed := now.Sub(r.last).Seconds()
+	if elapsed < 0 {
+		elapsed = 0
+	}
+
+	r.tokens = minFloat(r.burst, r.tokens+elapsed*r.rate)
+	r.last = now
+
+	if r.tokens < 1 {
+		return false
+	}
+
+	r.tokens -= 1
+	return true
+}
+
+func minFloat(a float64, b float64) float64 {
+	if a < b {
+		return a
+	}
+	return b
 }

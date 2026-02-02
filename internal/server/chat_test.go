@@ -27,21 +27,27 @@ import (
 	"testing"
 	"time"
 
+	"github.com/coder/websocket"
 	"github.com/go-json-experiment/json"
 	"github.com/google/go-cmp/cmp"
-	"nhooyr.io/websocket"
 )
 
 func TestNewChatHandlerDefaults(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(io.Discard, &slog.HandlerOptions{}))
 	hub := newChatHub()
-	handler := newChatHandler(hub, logger, 0, 0)
+	handler := newChatHandler(hub, logger, 0, 0, 0, 0)
 
 	if handler.maxMessageLen != defaultMaxMessageLen {
 		t.Fatalf("newChatHandler() maxMessageLen = %d, want %d", handler.maxMessageLen, defaultMaxMessageLen)
 	}
 	if handler.maxNameLen != defaultMaxNameLen {
 		t.Fatalf("newChatHandler() maxNameLen = %d, want %d", handler.maxNameLen, defaultMaxNameLen)
+	}
+	if handler.ratePerSecond != defaultRateLimitPerSecond {
+		t.Fatalf("newChatHandler() ratePerSecond = %v, want %v", handler.ratePerSecond, defaultRateLimitPerSecond)
+	}
+	if handler.burst != defaultRateLimitBurst {
+		t.Fatalf("newChatHandler() burst = %v, want %v", handler.burst, defaultRateLimitBurst)
 	}
 }
 
@@ -292,6 +298,31 @@ func TestTruncateRunes(t *testing.T) {
 				t.Fatalf("truncateRunes() mismatch (-want +got):\n%s", diff)
 			}
 		})
+	}
+}
+
+func TestRateLimiterAllow(t *testing.T) {
+	now := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	limiter := newRateLimiter(2, 3, now)
+
+	for i := 0; i < 3; i++ {
+		if !limiter.allow(now) {
+			t.Fatalf("allow() returned false at burst index %d", i)
+		}
+	}
+
+	if limiter.allow(now) {
+		t.Fatalf("allow() should be false when burst exhausted")
+	}
+
+	now = now.Add(500 * time.Millisecond)
+	if !limiter.allow(now) {
+		t.Fatalf("allow() should be true after refill")
+	}
+
+	now = now.Add(100 * time.Millisecond)
+	if limiter.allow(now) {
+		t.Fatalf("allow() should be false when tokens are low")
 	}
 }
 
