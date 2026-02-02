@@ -33,12 +33,14 @@ import (
 func main() {
 	addr := flag.String("addr", ":8080", "address to listen on")
 	staticDir := flag.String("static", "web/dist", "path to static assets (optional)")
+	metrics := flag.Bool("metrics", false, "enable /debug/vars metrics endpoint")
 	flag.Parse()
 
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
 	mux := server.NewMux(server.Config{
-		StaticDir:   *staticDir,
-		ChatEnabled: true,
+		StaticDir:      *staticDir,
+		ChatEnabled:    true,
+		MetricsEnabled: *metrics,
 	}, logger)
 
 	httpServer := &http.Server{
