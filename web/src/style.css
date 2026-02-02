@@ -27,6 +27,7 @@ body {
   margin: 0;
   width: 100%;
   height: 100%;
+  overflow: hidden;
   background: radial-gradient(120% 120% at 50% 20%, #1e1433 0%, var(--bg) 45%, var(--bg-deep) 100%);
   color: var(--fg);
 }
@@ -43,4 +44,42 @@ canvas {
   image-rendering: pixelated;
   border: 2px solid #1f2937;
   box-shadow: 0 0 40px rgba(0, 0, 0, 0.5);
+}
+
+#xr-root {
+  position: fixed;
+  inset: 0;
+  z-index: 3;
+  display: none;
+  pointer-events: none;
+}
+
+#xr-root.xr-active {
+  display: block;
+}
+
+.xr-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.xr-button {
+  position: fixed !important;
+  right: 16px;
+  bottom: 16px;
+  z-index: 4;
+  border: 1px solid #1f2937 !important;
+  background: rgba(11, 15, 20, 0.9) !important;
+  color: var(--fg) !important;
+  font-family: 'DotGothic16', monospace !important;
+  font-size: 12px !important;
+  padding: 10px 14px !important;
+  letter-spacing: 0.04em !important;
+  text-transform: uppercase;
+  box-shadow: 0 0 24px rgba(0, 0, 0, 0.45);
+}
+
+body.xr-active #app {
+  visibility: hidden;
 }

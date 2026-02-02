@@ -7,6 +7,12 @@ import { ResultScene } from './scenes/ResultScene'
 import { RhythmScene } from './scenes/RhythmScene'
 import { StoryScene } from './scenes/StoryScene'
 import { TitleScene } from './scenes/TitleScene'
+import { createVrTheater } from './vr/theater'
+
+const app = document.getElementById('app')
+if (!app) {
+  throw new Error('App root element not found')
+}
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.CANVAS,
@@ -22,4 +28,14 @@ const config: Phaser.Types.Core.GameConfig = {
   scene: [TitleScene, StoryScene, RhythmScene, ResultScene, EndingScene, CreditsScene],
 }
 
-new Phaser.Game(config)
+const game = new Phaser.Game(config)
+const vrTheater = createVrTheater({
+  canvas: game.canvas,
+  container: document.body,
+  gameWidth: GAME_WIDTH,
+  gameHeight: GAME_HEIGHT,
+})
+
+if (vrTheater) {
+  window.addEventListener('beforeunload', () => vrTheater.dispose())
+}
