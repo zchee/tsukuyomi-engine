@@ -36,4 +36,21 @@ describe('createAudienceRing', () => {
 
     ring.dispose()
   })
+
+  it('creates and updates nameplates for members', () => {
+    const ring = createAudienceRing({ nameplateMaxChars: 24 })
+    ring.updateUsers([{ id: 'a', name: 'Ada' }])
+
+    const label = ring.group.getObjectByName('a-label')
+    expect(label).not.toBeNull()
+    expect(label?.userData.text).toBe('Ada')
+
+    ring.updateUsers([{ id: 'a', name: 'Ada Lovelace' }])
+
+    const updatedLabel = ring.group.getObjectByName('a-label')
+    expect(updatedLabel).toBe(label)
+    expect(updatedLabel?.userData.text).toBe('Ada Lovelace')
+
+    ring.dispose()
+  })
 })
