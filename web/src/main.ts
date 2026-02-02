@@ -7,6 +7,7 @@ import { ResultScene } from './scenes/ResultScene'
 import { RhythmScene } from './scenes/RhythmScene'
 import { StoryScene } from './scenes/StoryScene'
 import { TitleScene } from './scenes/TitleScene'
+import { installChat } from './chat/chat'
 import { installVrLauncher } from './vr/launcher'
 
 const app = document.getElementById('app')
@@ -29,6 +30,7 @@ const config: Phaser.Types.Core.GameConfig = {
 }
 
 const game = new Phaser.Game(config)
+const chatClient = installChat({ container: document.body })
 const vrLauncher = installVrLauncher({
   canvas: game.canvas,
   container: document.body,
@@ -36,6 +38,7 @@ const vrLauncher = installVrLauncher({
   gameHeight: GAME_HEIGHT,
 })
 
-if (vrLauncher) {
-  window.addEventListener('beforeunload', () => vrLauncher.dispose())
-}
+window.addEventListener('beforeunload', () => {
+  chatClient?.dispose()
+  vrLauncher?.dispose()
+})
