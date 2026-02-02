@@ -22,40 +22,40 @@ export class ResultScene extends Phaser.Scene {
     const centerY = this.scale.height * 0.5
 
     this.add
-      .text(centerX, centerY - 50, 'RESULT', {
-        fontFamily: 'VT323',
+      .text(centerX, centerY - 50, '結果発表', {
+        fontFamily: 'DotGothic16',
         fontSize: '28px',
         color: '#e8f0ff',
       })
       .setOrigin(0.5)
 
     this.add
-      .text(centerX, centerY - 10, `Grade ${grade}`, {
-        fontFamily: 'VT323',
+      .text(centerX, centerY - 10, `評価 ${grade}`, {
+        fontFamily: 'DotGothic16',
         fontSize: '32px',
         color: '#7cf2b4',
       })
       .setOrigin(0.5)
 
     this.add
-      .text(centerX, centerY + 20, `Perfect ${perfect}  Good ${good}  Miss ${miss}`, {
-        fontFamily: 'VT323',
+      .text(centerX, centerY + 20, `完璧 ${perfect}  良 ${good}  不可 ${miss}`, {
+        fontFamily: 'DotGothic16',
         fontSize: '18px',
         color: '#8aa0b8',
       })
       .setOrigin(0.5)
 
     this.add
-      .text(centerX, centerY + 44, `Accuracy ${accuracyPct}%`, {
-        fontFamily: 'VT323',
+      .text(centerX, centerY + 44, `精度 ${accuracyPct}%`, {
+        fontFamily: 'DotGothic16',
         fontSize: '18px',
         color: '#f2d77c',
       })
       .setOrigin(0.5)
 
     const continueText = this.add
-      .text(centerX, centerY + 74, 'Continue', {
-        fontFamily: 'VT323',
+      .text(centerX, centerY + 74, '次へ', {
+        fontFamily: 'DotGothic16',
         fontSize: '20px',
         color: '#7cf2b4',
       })

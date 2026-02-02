@@ -15,23 +15,23 @@ export class EndingScene extends Phaser.Scene {
     const grade = gradeFromAccuracy(accuracy)
 
     const lines = [
-      'The song lands on a distant shore.',
+      '歌は遥か彼方の岸辺に辿り着く。',
       state.choiceId === 'reply'
-        ? 'A reply arrives before the memory fades.'
-        : 'You keep the memory until it becomes a signal.',
+        ? '記憶が薄れる前に、返信が届く。'
+        : '記憶はいつしか信号となり、残り続ける。',
       grade === 'S'
-        ? 'The loop hums bright and clear.'
+        ? 'ループは明るく、鮮明に鳴り響く。'
         : grade === 'A'
-          ? 'The loop steadies with every echo.'
+          ? 'こだまする度、ループは安定していく。'
           : grade === 'B'
-            ? 'The loop trembles, but holds.'
-            : 'The loop slips, waiting for another try.',
-      'Somewhere, a new loop begins.',
+            ? 'ループは震えているが、途切れない。'
+            : 'ループは滑り落ち、次の試行を待つ。',
+      'どこかで、新しいループが始まる。',
     ]
 
     this.add
-      .text(centerX, 40, 'ENDING', {
-        fontFamily: 'VT323',
+      .text(centerX, 40, '終幕', {
+        fontFamily: 'DotGothic16',
         fontSize: '24px',
         color: '#e8f0ff',
       })
@@ -40,7 +40,7 @@ export class EndingScene extends Phaser.Scene {
     lines.forEach((line, index) => {
       this.add
         .text(centerX, 76 + index * 18, line, {
-          fontFamily: 'VT323',
+          fontFamily: 'DotGothic16',
           fontSize: '18px',
           color: '#8aa0b8',
         })
@@ -48,8 +48,8 @@ export class EndingScene extends Phaser.Scene {
     })
 
     const restartText = this.add
-      .text(centerX, 150, 'Credits', {
-        fontFamily: 'VT323',
+      .text(centerX, 150, 'クレジット', {
+        fontFamily: 'DotGothic16',
         fontSize: '20px',
         color: '#7cf2b4',
       })

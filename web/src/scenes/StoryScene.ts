@@ -34,14 +34,14 @@ export class StoryScene extends Phaser.Scene {
     portrait.fillStyle(0xe8f0ff, 1)
     portrait.fillRect(32, 38, 12, 8)
 
-    this.add.text(72, 18, 'YOU', {
-      fontFamily: 'VT323',
+    this.add.text(72, 18, 'あなた', {
+      fontFamily: 'DotGothic16',
       fontSize: '16px',
       color: '#f2d77c',
     })
 
-    this.add.text(this.scale.width - 16, 18, 'Loop 01', {
-      fontFamily: 'VT323',
+    this.add.text(this.scale.width - 16, 18, 'ループ 01', {
+      fontFamily: 'DotGothic16',
       fontSize: '14px',
       color: '#8aa0b8',
     }).setOrigin(1, 0)
@@ -53,7 +53,7 @@ export class StoryScene extends Phaser.Scene {
     box.strokeRoundedRect(12, 96, this.scale.width - 24, 72, 6)
 
     const text = this.add.text(20, 104, '', {
-      fontFamily: 'VT323',
+      fontFamily: 'DotGothic16',
       fontSize: '18px',
       color: '#e8f0ff',
       wordWrap: { width: this.scale.width - 40 },
@@ -66,9 +66,9 @@ export class StoryScene extends Phaser.Scene {
       .text(
         this.scale.width - 16,
         168,
-        autoAdvance ? 'Auto ON | Tap/Space | L: Log' : 'Tap/Space | A: Auto | L: Log',
+        autoAdvance ? '自動ON | タップ/Space | L: ログ' : 'タップ/Space | A: 自動 | L: ログ',
         {
-          fontFamily: 'VT323',
+          fontFamily: 'DotGothic16',
           fontSize: '14px',
           color: '#8aa0b8',
         }
@@ -83,8 +83,8 @@ export class StoryScene extends Phaser.Scene {
     logPanel.setVisible(false)
 
     const logTitle = this.add
-      .text(20, 28, 'LOG', {
-        fontFamily: 'VT323',
+      .text(20, 28, 'ログ', {
+        fontFamily: 'DotGothic16',
         fontSize: '16px',
         color: '#f2d77c',
       })
@@ -92,7 +92,7 @@ export class StoryScene extends Phaser.Scene {
 
     const logText = this.add
       .text(20, 48, '', {
-        fontFamily: 'VT323',
+        fontFamily: 'DotGothic16',
         fontSize: '14px',
         color: '#e8f0ff',
         wordWrap: { width: this.scale.width - 40 },
@@ -143,7 +143,7 @@ export class StoryScene extends Phaser.Scene {
       choices.forEach((choice, index) => {
         const choiceText = this.add
           .text(24, 112 + index * 22, `> ${choice.label}`, {
-            fontFamily: 'VT323',
+            fontFamily: 'DotGothic16',
             fontSize: '18px',
             color: '#7cf2b4',
           })
@@ -219,7 +219,7 @@ export class StoryScene extends Phaser.Scene {
       const next = setSettings({ autoAdvance })
       saveSettings(next)
       hint.setText(
-        next.autoAdvance ? 'Auto ON | Tap/Space | L: Log' : 'Tap/Space | A: Auto | L: Log'
+        next.autoAdvance ? '自動ON | タップ/Space | L: ログ' : 'タップ/Space | A: 自動 | L: ログ'
       )
     })
 

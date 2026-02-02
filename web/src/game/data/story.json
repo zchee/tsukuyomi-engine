@@ -4,38 +4,46 @@
     "intro": {
       "id": "intro",
       "lines": [
-        "A signal flickers across the virtual skyline: REPLY.",
-        "You wrote a melody you cannot remember composing.",
-        "Two choices. The same echo."
+        "仮想の地平線に信号が明滅する……『REPLY』。",
+        "書いた覚えのない旋律が、そこにはあった。",
+        "二つの選択。響くこだまは同じ。"
       ],
       "choices": [
-        { "id": "reply", "label": "Send the reply", "next": "replyPath" },
-        { "id": "remember", "label": "Keep the memory", "next": "rememberPath" }
+        {
+          "id": "reply",
+          "label": "返信を送る",
+          "next": "replyPath"
+        },
+        {
+          "id": "remember",
+          "label": "記憶に留める",
+          "next": "rememberPath"
+        }
       ]
     },
     "replyPath": {
       "id": "replyPath",
       "lines": [
-        "You send the reply into the quiet.",
-        "A pulse returns, faint but familiar."
+        "静寂の中に返信を放つ。",
+        "微かな、しかし懐かしい鼓動が返ってくる。"
       ],
       "next": "prelude"
     },
     "rememberPath": {
       "id": "rememberPath",
       "lines": [
-        "You keep the memory close, like a hidden key.",
-        "The room warms. The track asks to be finished."
+        "記憶を隠された鍵のように、大切に抱く。",
+        "部屋が熱を帯びる。その曲は完成を求めている。"
       ],
       "next": "prelude"
     },
     "prelude": {
       "id": "prelude",
       "lines": [
-        "The rehearsal room hums like a distant moon.",
-        "Your hands move before your thoughts can follow.",
-        "Every note feels older than you are.",
-        "If the song lands, the loop will close."
+        "リハーサル室が、遠い月のように唸りを上げる。",
+        "思考より早く、指が動く。",
+        "どの音も、自分より古く感じる。",
+        "歌が届けば、このループは閉じる。"
       ],
       "next": "rhythm"
     }

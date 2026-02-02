@@ -14,7 +14,7 @@ export class CreditsScene extends Phaser.Scene {
 
     this.add
       .text(centerX, 24, credits.title, {
-        fontFamily: 'VT323',
+        fontFamily: 'DotGothic16',
         fontSize: '24px',
         color: '#e8f0ff',
       })
@@ -23,7 +23,7 @@ export class CreditsScene extends Phaser.Scene {
     credits.entries.forEach((entry, index) => {
       this.add
         .text(centerX, 56 + index * 18, `${entry.role}: ${entry.name}`, {
-          fontFamily: 'VT323',
+          fontFamily: 'DotGothic16',
           fontSize: '16px',
           color: '#8aa0b8',
         })
@@ -31,8 +31,8 @@ export class CreditsScene extends Phaser.Scene {
     })
 
     const restartText = this.add
-      .text(centerX, 150, 'Back to Title', {
-        fontFamily: 'VT323',
+      .text(centerX, 150, 'タイトルへ戻る', {
+        fontFamily: 'DotGothic16',
         fontSize: '18px',
         color: '#7cf2b4',
       })

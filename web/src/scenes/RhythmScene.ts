@@ -19,7 +19,6 @@ export class RhythmScene extends Phaser.Scene {
   private scoreText?: Phaser.GameObjects.Text
   private feedbackText?: Phaser.GameObjects.Text
   private readyText?: Phaser.GameObjects.Text
-  private helpText?: Phaser.GameObjects.Text
   private pausedText?: Phaser.GameObjects.Text
   private countdownText?: Phaser.GameObjects.Text
   private started = false
@@ -41,31 +40,31 @@ export class RhythmScene extends Phaser.Scene {
     this.hitResults = []
 
     this.graphics = this.add.graphics()
-    this.scoreText = this.add.text(12, 12, 'Perfect 0 | Good 0 | Miss 0', {
-      fontFamily: 'VT323',
+    this.scoreText = this.add.text(12, 12, '完璧 0 | 良 0 | 不可 0', {
+      fontFamily: 'DotGothic16',
       fontSize: '16px',
       color: '#e8f0ff',
     })
 
     this.feedbackText = this.add
       .text(this.scale.width * 0.5, HIT_LINE_Y - 24, '', {
-        fontFamily: 'VT323',
+        fontFamily: 'DotGothic16',
         fontSize: '18px',
         color: '#7cf2b4',
       })
       .setOrigin(0.5)
 
-    this.helpText = this.add
-      .text(this.scale.width - 12, 12, 'Space/Tap | P: Pause | Esc: Exit', {
-        fontFamily: 'VT323',
+    this.add
+      .text(this.scale.width - 12, 12, 'Space/タップ | P:一時停止 | Esc:終了', {
+        fontFamily: 'DotGothic16',
         fontSize: '12px',
         color: '#8aa0b8',
       })
       .setOrigin(1, 0)
 
     this.readyText = this.add
-      .text(this.scale.width * 0.5, this.scale.height * 0.5, 'Tap or Space to start', {
-        fontFamily: 'VT323',
+      .text(this.scale.width * 0.5, this.scale.height * 0.5, 'タップ または スペースで開始', {
+        fontFamily: 'DotGothic16',
         fontSize: '20px',
         color: '#7cf2b4',
       })
@@ -73,7 +72,7 @@ export class RhythmScene extends Phaser.Scene {
 
     this.countdownText = this.add
       .text(this.scale.width * 0.5, this.scale.height * 0.5 + 20, '', {
-        fontFamily: 'VT323',
+        fontFamily: 'DotGothic16',
         fontSize: '16px',
         color: '#8aa0b8',
       })
@@ -81,8 +80,8 @@ export class RhythmScene extends Phaser.Scene {
       .setVisible(false)
 
     this.pausedText = this.add
-      .text(this.scale.width * 0.5, this.scale.height * 0.5, 'PAUSED', {
-        fontFamily: 'VT323',
+      .text(this.scale.width * 0.5, this.scale.height * 0.5, '一時停止', {
+        fontFamily: 'DotGothic16',
         fontSize: '24px',
         color: '#f2d77c',
       })
@@ -306,7 +305,7 @@ export class RhythmScene extends Phaser.Scene {
 
     const summary = summarizeHits(this.hitResults)
     this.scoreText.setText(
-      `Perfect ${summary.perfect} | Good ${summary.good} | Miss ${summary.miss}`
+      `完璧 ${summary.perfect} | 良 ${summary.good} | 不可 ${summary.miss}`
     )
   }
 
@@ -317,6 +316,7 @@ export class RhythmScene extends Phaser.Scene {
 
     const color = grade === 'perfect' ? '#7cf2b4' : grade === 'good' ? '#f2d77c' : '#ff6b6b'
     this.feedbackText.setColor(color)
-    this.feedbackText.setText(grade.toUpperCase())
+    const text = grade === 'perfect' ? '完璧' : grade === 'good' ? '良' : '不可'
+    this.feedbackText.setText(text)
   }
 }

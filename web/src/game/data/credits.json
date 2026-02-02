@@ -1,9 +1,21 @@
 {
-  "title": "CREDITS",
+  "title": "制作スタッフ",
   "entries": [
-    { "role": "Story", "name": "You" },
-    { "role": "Pixel Art", "name": "You" },
-    { "role": "Music", "name": "Original" },
-    { "role": "Engineering", "name": "You" }
+    {
+      "role": "物語",
+      "name": "あなた"
+    },
+    {
+      "role": "ドット絵",
+      "name": "あなた"
+    },
+    {
+      "role": "音楽",
+      "name": "オリジナル"
+    },
+    {
+      "role": "開発",
+      "name": "あなた"
+    }
   ]
 }
