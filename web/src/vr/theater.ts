@@ -9,6 +9,7 @@ import {
   type ChatPresence,
 } from '../chat/chat'
 import { createAudienceRing } from './audience'
+import { createChatTicker } from './ticker'
 import { computeScreenDimensions } from './geometry'
 import { dispatchPointerEvent } from './input'
 import { pulseHaptics } from './haptics'
@@ -145,6 +146,14 @@ export function createVrTheater(
   frame.rotation.copy(screenMesh.rotation)
   scene.add(frame)
 
+  const ticker = createChatTicker({
+    width: screenWidth * 1.1,
+    height: screenHeight * 0.22,
+  })
+  ticker.mesh.position.set(0, 0.8, -2.3)
+  ticker.mesh.rotation.copy(screenMesh.rotation)
+  scene.add(ticker.mesh)
+
   const audience = createAudienceRing({ radius: 1.7 })
   audience.group.position.set(0, 1.05, -2.2)
   scene.add(audience.group)
@@ -268,6 +277,11 @@ export function createVrTheater(
       audienceUsers.clear()
       detail.users?.forEach((user) => audienceUsers.set(user.id, user))
       syncAudience()
+      if (detail.from?.name) {
+        ticker.addMessage(`Connected as ${detail.from.name}`)
+      } else {
+        ticker.addMessage('Connected to chat')
+      }
       return
     }
     if (detail.type === 'presence' && detail.from) {
@@ -278,6 +292,16 @@ export function createVrTheater(
         audienceUsers.delete(detail.from.id)
       }
       syncAudience()
+      if (detail.action === 'join') {
+        ticker.addMessage(`${detail.from.name} joined`)
+      }
+      if (detail.action === 'leave') {
+        ticker.addMessage(`${detail.from.name} left`)
+      }
+      if (detail.action === 'rename') {
+        const previous = detail.body ?? 'Someone'
+        ticker.addMessage(`${previous} is now ${detail.from.name}`)
+      }
       return
     }
     if (detail.type === 'chat' && detail.from) {
@@ -286,6 +310,7 @@ export function createVrTheater(
           ? performance.now()
           : Date.now()
       audience.pulse(detail.from.id, now)
+      ticker.addMessage(`${detail.from.name}: ${detail.body ?? ''}`.trim())
     }
   }
 
@@ -410,6 +435,8 @@ export function createVrTheater(
     glowMaterial.dispose()
     frame.geometry.dispose()
     frameMaterial.dispose()
+    ticker.dispose()
+    ticker.mesh.removeFromParent()
     audience.dispose()
     audience.group.removeFromParent()
     starGeometry.dispose()
