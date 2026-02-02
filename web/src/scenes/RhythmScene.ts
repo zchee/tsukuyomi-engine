@@ -1,5 +1,5 @@
 import Phaser from 'phaser'
-import { beatmap } from '../game/data/beatmap'
+import { getBeatmap } from '../game/beatmap'
 import { GOOD_WINDOW_MS, HIT_LINE_Y, NOTE_TRAVEL_MS } from '../game/constants'
 import { evaluateHit, summarizeHits } from '../game/rhythm'
 import { getState, setState } from '../game/state'
@@ -15,8 +15,10 @@ export class RhythmScene extends Phaser.Scene {
   private hitResults: HitResult[] = []
   private graphics?: Phaser.GameObjects.Graphics
   private scoreText?: Phaser.GameObjects.Text
+  private feedbackText?: Phaser.GameObjects.Text
   private readyText?: Phaser.GameObjects.Text
   private started = false
+  private beatmap = getBeatmap()
 
   constructor() {
     super('RhythmScene')
@@ -29,7 +31,7 @@ export class RhythmScene extends Phaser.Scene {
       return
     }
 
-    this.noteStatuses = beatmap.notes.map(() => 'pending')
+    this.noteStatuses = this.beatmap.notes.map(() => 'pending')
     this.hitResults = []
 
     this.graphics = this.add.graphics()
@@ -38,6 +40,14 @@ export class RhythmScene extends Phaser.Scene {
       fontSize: '16px',
       color: '#e8f0ff',
     })
+
+    this.feedbackText = this.add
+      .text(this.scale.width * 0.5, HIT_LINE_Y - 24, '', {
+        fontFamily: 'VT323',
+        fontSize: '18px',
+        color: '#7cf2b4',
+      })
+      .setOrigin(0.5)
 
     this.readyText = this.add
       .text(this.scale.width * 0.5, this.scale.height * 0.5, 'Tap or Space to start', {
@@ -74,7 +84,7 @@ export class RhythmScene extends Phaser.Scene {
     this.renderNotes(currentMs)
     this.checkMisses(currentMs)
 
-    const lastNote = beatmap.notes[beatmap.notes.length - 1] ?? 0
+    const lastNote = this.beatmap.notes[this.beatmap.notes.length - 1] ?? 0
     if (currentMs > lastNote + GOOD_WINDOW_MS + 500 && this.noteStatuses.every((status) => status !== 'pending')) {
       const summary = summarizeHits(this.hitResults)
       setState({ hasPlayedRhythm: true, score: summary })
@@ -94,9 +104,9 @@ export class RhythmScene extends Phaser.Scene {
     master.gain.value = 0.2
     master.connect(this.audioContext.destination)
 
-    this.songStartTime = this.audioContext.currentTime + beatmap.offsetMs / 1000
+    this.songStartTime = this.audioContext.currentTime + this.beatmap.offsetMs / 1000
 
-    for (const noteMs of beatmap.notes) {
+    for (const noteMs of this.beatmap.notes) {
       const time = this.songStartTime + noteMs / 1000
       const osc = this.audioContext.createOscillator()
       const gain = this.audioContext.createGain()
@@ -125,7 +135,7 @@ export class RhythmScene extends Phaser.Scene {
     let bestIndex = -1
     let bestDelta = Number.POSITIVE_INFINITY
 
-    beatmap.notes.forEach((noteMs, index) => {
+    this.beatmap.notes.forEach((noteMs, index) => {
       if (this.noteStatuses[index] !== 'pending') {
         return
       }
@@ -141,15 +151,16 @@ export class RhythmScene extends Phaser.Scene {
       return
     }
 
-    const noteMs = beatmap.notes[bestIndex]
+    const noteMs = this.beatmap.notes[bestIndex]
     const result = evaluateHit(currentMs, noteMs)
     this.noteStatuses[bestIndex] = result.grade === 'miss' ? 'miss' : 'hit'
     this.hitResults.push(result)
+    this.updateFeedback(result.grade)
     this.updateScoreText()
   }
 
   private checkMisses(currentMs: number): void {
-    beatmap.notes.forEach((noteMs, index) => {
+    this.beatmap.notes.forEach((noteMs, index) => {
       if (this.noteStatuses[index] !== 'pending') {
         return
       }
@@ -161,6 +172,7 @@ export class RhythmScene extends Phaser.Scene {
           noteMs,
           deltaMs: currentMs - noteMs,
         })
+        this.updateFeedback('miss')
         this.updateScoreText()
       }
     })
@@ -183,7 +195,7 @@ export class RhythmScene extends Phaser.Scene {
     const travelDistance = 96
     const startY = HIT_LINE_Y - travelDistance
 
-    beatmap.notes.forEach((noteMs, index) => {
+    this.beatmap.notes.forEach((noteMs, index) => {
       if (this.noteStatuses[index] !== 'pending') {
         return
       }
@@ -211,5 +223,15 @@ export class RhythmScene extends Phaser.Scene {
     this.scoreText.setText(
       `Perfect ${summary.perfect} | Good ${summary.good} | Miss ${summary.miss}`
     )
+  }
+
+  private updateFeedback(grade: 'perfect' | 'good' | 'miss'): void {
+    if (!this.feedbackText) {
+      return
+    }
+
+    const color = grade === 'perfect' ? '#7cf2b4' : grade === 'good' ? '#f2d77c' : '#ff6b6b'
+    this.feedbackText.setColor(color)
+    this.feedbackText.setText(grade.toUpperCase())
   }
 }

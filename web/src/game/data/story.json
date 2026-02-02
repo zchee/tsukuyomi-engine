@@ -1,0 +1,43 @@
+{
+  "startId": "intro",
+  "nodes": {
+    "intro": {
+      "id": "intro",
+      "lines": [
+        "A signal flickers across the virtual skyline: REPLY.",
+        "You wrote a melody you cannot remember composing.",
+        "Two choices. The same echo."
+      ],
+      "choices": [
+        { "id": "reply", "label": "Send the reply", "next": "replyPath" },
+        { "id": "remember", "label": "Keep the memory", "next": "rememberPath" }
+      ]
+    },
+    "replyPath": {
+      "id": "replyPath",
+      "lines": [
+        "You send the reply into the quiet.",
+        "A pulse returns, faint but familiar."
+      ],
+      "next": "prelude"
+    },
+    "rememberPath": {
+      "id": "rememberPath",
+      "lines": [
+        "You keep the memory close, like a hidden key.",
+        "The room warms. The track asks to be finished."
+      ],
+      "next": "prelude"
+    },
+    "prelude": {
+      "id": "prelude",
+      "lines": [
+        "The rehearsal room hums like a distant moon.",
+        "Your hands move before your thoughts can follow.",
+        "Every note feels older than you are.",
+        "If the song lands, the loop will close."
+      ],
+      "next": "rhythm"
+    }
+  }
+}
