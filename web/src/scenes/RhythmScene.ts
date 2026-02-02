@@ -5,6 +5,7 @@ import { evaluateHit, summarizeHits } from '../game/rhythm'
 import { getSettings } from '../game/settings'
 import { getState, setState } from '../game/state'
 import { saveProgress } from '../game/storage'
+import { countdownLabel } from '../game/timing'
 import type { HitResult } from '../game/types'
 
 type NoteStatus = 'pending' | 'hit' | 'miss'
@@ -20,6 +21,7 @@ export class RhythmScene extends Phaser.Scene {
   private readyText?: Phaser.GameObjects.Text
   private helpText?: Phaser.GameObjects.Text
   private pausedText?: Phaser.GameObjects.Text
+  private countdownText?: Phaser.GameObjects.Text
   private started = false
   private paused = false
   private beatmap = getBeatmap()
@@ -68,6 +70,15 @@ export class RhythmScene extends Phaser.Scene {
         color: '#7cf2b4',
       })
       .setOrigin(0.5)
+
+    this.countdownText = this.add
+      .text(this.scale.width * 0.5, this.scale.height * 0.5 + 20, '', {
+        fontFamily: 'VT323',
+        fontSize: '16px',
+        color: '#8aa0b8',
+      })
+      .setOrigin(0.5)
+      .setVisible(false)
 
     this.pausedText = this.add
       .text(this.scale.width * 0.5, this.scale.height * 0.5, 'PAUSED', {
@@ -119,6 +130,7 @@ export class RhythmScene extends Phaser.Scene {
 
     const currentMs = (this.audioContext.currentTime - this.songStartTime) * 1000
 
+    this.updateCountdown(currentMs)
     this.renderNotes(currentMs)
     this.checkMisses(currentMs)
 
@@ -189,6 +201,9 @@ export class RhythmScene extends Phaser.Scene {
     }
 
     const currentMs = (this.audioContext.currentTime - this.songStartTime) * 1000
+    if (currentMs < 0) {
+      return
+    }
     let bestIndex = -1
     let bestDelta = Number.POSITIVE_INFINITY
 
@@ -214,6 +229,19 @@ export class RhythmScene extends Phaser.Scene {
     this.hitResults.push(result)
     this.updateFeedback(result.grade)
     this.updateScoreText()
+  }
+
+  private updateCountdown(currentMs: number): void {
+    if (!this.countdownText) {
+      return
+    }
+    const label = countdownLabel(currentMs)
+    if (!label) {
+      this.countdownText.setVisible(false)
+      return
+    }
+    this.countdownText.setText(label)
+    this.countdownText.setVisible(true)
   }
 
   private checkMisses(currentMs: number): void {
