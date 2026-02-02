@@ -40,6 +40,12 @@ export type StoryScript = {
   nodes: Record<string, StoryNode>
 }
 
+export type Settings = {
+  autoAdvance: boolean
+  soundEnabled: boolean
+  textSpeed: 'slow' | 'normal' | 'fast'
+}
+
 export type AppState = {
   storyNodeId: string
   choiceId?: string

@@ -2,6 +2,7 @@ import Phaser from 'phaser'
 import { getBeatmap } from '../game/beatmap'
 import { GOOD_WINDOW_MS, HIT_LINE_Y, NOTE_TRAVEL_MS } from '../game/constants'
 import { evaluateHit, summarizeHits } from '../game/rhythm'
+import { getSettings } from '../game/settings'
 import { getState, setState } from '../game/state'
 import { saveProgress } from '../game/storage'
 import type { HitResult } from '../game/types'
@@ -101,10 +102,15 @@ export class RhythmScene extends Phaser.Scene {
     void this.audioContext.resume()
 
     const master = this.audioContext.createGain()
-    master.gain.value = 0.2
+    const settings = getSettings()
+    master.gain.value = settings.soundEnabled ? 0.2 : 0
     master.connect(this.audioContext.destination)
 
     this.songStartTime = this.audioContext.currentTime + this.beatmap.offsetMs / 1000
+
+    if (!settings.soundEnabled) {
+      return
+    }
 
     for (const noteMs of this.beatmap.notes) {
       const time = this.songStartTime + noteMs / 1000
