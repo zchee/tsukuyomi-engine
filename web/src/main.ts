@@ -7,7 +7,7 @@ import { ResultScene } from './scenes/ResultScene'
 import { RhythmScene } from './scenes/RhythmScene'
 import { StoryScene } from './scenes/StoryScene'
 import { TitleScene } from './scenes/TitleScene'
-import { createVrTheater } from './vr/theater'
+import { installVrLauncher } from './vr/launcher'
 
 const app = document.getElementById('app')
 if (!app) {
@@ -29,13 +29,13 @@ const config: Phaser.Types.Core.GameConfig = {
 }
 
 const game = new Phaser.Game(config)
-const vrTheater = createVrTheater({
+const vrLauncher = installVrLauncher({
   canvas: game.canvas,
   container: document.body,
   gameWidth: GAME_WIDTH,
   gameHeight: GAME_HEIGHT,
 })
 
-if (vrTheater) {
-  window.addEventListener('beforeunload', () => vrTheater.dispose())
+if (vrLauncher) {
+  window.addEventListener('beforeunload', () => vrLauncher.dispose())
 }
