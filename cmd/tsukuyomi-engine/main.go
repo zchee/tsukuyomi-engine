@@ -36,7 +36,10 @@ func main() {
 	flag.Parse()
 
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
-	mux := server.NewMux(server.Config{StaticDir: *staticDir}, logger)
+	mux := server.NewMux(server.Config{
+		StaticDir:   *staticDir,
+		ChatEnabled: true,
+	}, logger)
 
 	httpServer := &http.Server{
 		Addr:              *addr,
