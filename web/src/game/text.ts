@@ -11,3 +11,13 @@ export function advanceReveal(
   const next = visibleChars + (deltaMs / 1000) * charsPerSecond
   return Math.min(next, totalChars)
 }
+
+export function charsPerSecondFromSpeed(speed: 'slow' | 'normal' | 'fast'): number {
+  if (speed === 'slow') {
+    return 24
+  }
+  if (speed === 'fast') {
+    return 60
+  }
+  return 40
+}
