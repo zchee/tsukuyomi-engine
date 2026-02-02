@@ -23,6 +23,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -77,5 +78,36 @@ func TestNewMuxMissingStatic(t *testing.T) {
 
 	if diff := cmp.Diff(http.StatusNotFound, rr.Code); diff != "" {
 		t.Fatalf("NewMux() missing static status mismatch (-want +got):\n%s", diff)
+	}
+}
+
+func TestNewMuxMetricsDisabled(t *testing.T) {
+	logger := slog.New(slog.NewTextHandler(io.Discard, &slog.HandlerOptions{Level: slog.LevelInfo}))
+	mux := NewMux(Config{}, logger)
+
+	req := httptest.NewRequest(http.MethodGet, "/debug/vars", nil).WithContext(t.Context())
+	rr := httptest.NewRecorder()
+
+	mux.ServeHTTP(rr, req)
+
+	if diff := cmp.Diff(http.StatusNotFound, rr.Code); diff != "" {
+		t.Fatalf("NewMux() metrics disabled status mismatch (-want +got):\n%s", diff)
+	}
+}
+
+func TestNewMuxMetricsEnabled(t *testing.T) {
+	logger := slog.New(slog.NewTextHandler(io.Discard, &slog.HandlerOptions{Level: slog.LevelInfo}))
+	mux := NewMux(Config{MetricsEnabled: true}, logger)
+
+	req := httptest.NewRequest(http.MethodGet, "/debug/vars", nil).WithContext(t.Context())
+	rr := httptest.NewRecorder()
+
+	mux.ServeHTTP(rr, req)
+
+	if diff := cmp.Diff(http.StatusOK, rr.Code); diff != "" {
+		t.Fatalf("NewMux() metrics enabled status mismatch (-want +got):\n%s", diff)
+	}
+	if body := rr.Body.String(); !strings.Contains(body, "chat_connections") {
+		t.Fatalf("metrics body missing chat_connections: %s", body)
 	}
 }

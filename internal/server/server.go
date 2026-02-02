@@ -17,16 +17,20 @@
 package server
 
 import (
+	"expvar"
 	"log/slog"
 	"net/http"
 	"os"
 )
 
 type Config struct {
-	StaticDir         string
-	ChatEnabled       bool
-	ChatMaxMessageLen int
-	ChatMaxNameLen    int
+	StaticDir              string
+	ChatEnabled            bool
+	ChatMaxMessageLen      int
+	ChatMaxNameLen         int
+	ChatRateLimitPerSecond float64
+	ChatRateLimitBurst     float64
+	MetricsEnabled         bool
 }
 
 func NewMux(cfg Config, logger *slog.Logger) *http.ServeMux {
@@ -37,9 +41,20 @@ func NewMux(cfg Config, logger *slog.Logger) *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", healthHandler)
 
+	if cfg.MetricsEnabled {
+		mux.Handle("/debug/vars", expvar.Handler())
+	}
+
 	if cfg.ChatEnabled {
 		chatHub := newChatHub()
-		chatHandler := newChatHandler(chatHub, logger, cfg.ChatMaxMessageLen, cfg.ChatMaxNameLen)
+		chatHandler := newChatHandler(
+			chatHub,
+			logger,
+			cfg.ChatMaxMessageLen,
+			cfg.ChatMaxNameLen,
+			cfg.ChatRateLimitPerSecond,
+			cfg.ChatRateLimitBurst,
+		)
 		mux.Handle("/ws", chatHandler)
 	}
 
