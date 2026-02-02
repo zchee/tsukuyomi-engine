@@ -19,6 +19,30 @@ export class StoryScene extends Phaser.Scene {
     let node: StoryNode = getStoryNode(state.storyNodeId)
     let lineIndex = 0
 
+    const portrait = this.add.graphics()
+    portrait.fillStyle(0x101826, 1)
+    portrait.fillRect(14, 14, 52, 52)
+    portrait.lineStyle(2, 0x1f2937, 1)
+    portrait.strokeRect(14, 14, 52, 52)
+    portrait.fillStyle(0x7cf2b4, 1)
+    portrait.fillRect(24, 24, 8, 8)
+    portrait.fillStyle(0xf2d77c, 1)
+    portrait.fillRect(40, 24, 8, 8)
+    portrait.fillStyle(0xe8f0ff, 1)
+    portrait.fillRect(32, 38, 12, 8)
+
+    this.add.text(72, 18, 'YOU', {
+      fontFamily: 'VT323',
+      fontSize: '16px',
+      color: '#f2d77c',
+    })
+
+    this.add.text(this.scale.width - 16, 18, 'Loop 01', {
+      fontFamily: 'VT323',
+      fontSize: '14px',
+      color: '#8aa0b8',
+    }).setOrigin(1, 0)
+
     const box = this.add.graphics()
     box.fillStyle(0x0b0f14, 0.8)
     box.fillRoundedRect(12, 96, this.scale.width - 24, 72, 6)

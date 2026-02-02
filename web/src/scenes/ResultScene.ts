@@ -1,4 +1,5 @@
 import Phaser from 'phaser'
+import { gradeFromAccuracy } from '../game/rhythm'
 import { getState } from '../game/state'
 
 export class ResultScene extends Phaser.Scene {
@@ -15,15 +16,7 @@ export class ResultScene extends Phaser.Scene {
 
     const { perfect, good, miss, accuracy } = state.score
     const accuracyPct = Math.round(accuracy * 100)
-
-    let grade = 'C'
-    if (accuracyPct >= 95) {
-      grade = 'S'
-    } else if (accuracyPct >= 85) {
-      grade = 'A'
-    } else if (accuracyPct >= 70) {
-      grade = 'B'
-    }
+    const grade = gradeFromAccuracy(accuracy)
 
     const centerX = this.scale.width * 0.5
     const centerY = this.scale.height * 0.5

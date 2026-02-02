@@ -1,4 +1,5 @@
 import Phaser from 'phaser'
+import { gradeFromAccuracy } from '../game/rhythm'
 import { getState, resetState } from '../game/state'
 import { clearProgress } from '../game/storage'
 
@@ -11,11 +12,21 @@ export class EndingScene extends Phaser.Scene {
     const state = getState()
     const centerX = this.scale.width * 0.5
 
+    const accuracy = state.score?.accuracy ?? 0
+    const grade = gradeFromAccuracy(accuracy)
+
     const lines = [
       'The song lands on a distant shore.',
       state.choiceId === 'reply'
         ? 'A reply arrives before the memory fades.'
         : 'You keep the memory until it becomes a signal.',
+      grade === 'S'
+        ? 'The loop hums bright and clear.'
+        : grade === 'A'
+          ? 'The loop steadies with every echo.'
+          : grade === 'B'
+            ? 'The loop trembles, but holds.'
+            : 'The loop slips, waiting for another try.',
       'Somewhere, a new loop begins.',
     ]
 

@@ -56,3 +56,18 @@ export function summarizeHits(hits: HitResult[]): ScoreSummary {
   summary.accuracy = summary.maxScore === 0 ? 0 : summary.score / summary.maxScore
   return summary
 }
+
+export function gradeFromAccuracy(accuracy: number): 'S' | 'A' | 'B' | 'C' {
+  const accuracyPct = Math.round(accuracy * 100)
+
+  if (accuracyPct >= 95) {
+    return 'S'
+  }
+  if (accuracyPct >= 85) {
+    return 'A'
+  }
+  if (accuracyPct >= 70) {
+    return 'B'
+  }
+  return 'C'
+}

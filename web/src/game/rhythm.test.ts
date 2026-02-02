@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { evaluateHit, scoreFromHit, summarizeHits } from './rhythm'
+import { evaluateHit, gradeFromAccuracy, scoreFromHit, summarizeHits } from './rhythm'
 
 describe('evaluateHit', () => {
   it('returns perfect inside the tight window', () => {
@@ -40,5 +40,14 @@ describe('summarizeHits', () => {
     expect(summary.score).toBe(3)
     expect(summary.maxScore).toBe(6)
     expect(summary.accuracy).toBeCloseTo(0.5, 5)
+  })
+})
+
+describe('gradeFromAccuracy', () => {
+  it('maps accuracy to grades', () => {
+    expect(gradeFromAccuracy(0.96)).toBe('S')
+    expect(gradeFromAccuracy(0.9)).toBe('A')
+    expect(gradeFromAccuracy(0.72)).toBe('B')
+    expect(gradeFromAccuracy(0.5)).toBe('C')
   })
 })
