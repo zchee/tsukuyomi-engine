@@ -1,6 +1,7 @@
 import './style.css'
 import Phaser from 'phaser'
 import { GAME_HEIGHT, GAME_WIDTH } from './game/constants'
+import { CreditsScene } from './scenes/CreditsScene'
 import { EndingScene } from './scenes/EndingScene'
 import { ResultScene } from './scenes/ResultScene'
 import { RhythmScene } from './scenes/RhythmScene'
@@ -18,7 +19,7 @@ const config: Phaser.Types.Core.GameConfig = {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
   },
-  scene: [TitleScene, StoryScene, RhythmScene, ResultScene, EndingScene],
+  scene: [TitleScene, StoryScene, RhythmScene, ResultScene, EndingScene, CreditsScene],
 }
 
 new Phaser.Game(config)

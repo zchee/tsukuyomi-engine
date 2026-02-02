@@ -1,0 +1,9 @@
+{
+  "title": "CREDITS",
+  "entries": [
+    { "role": "Story", "name": "You" },
+    { "role": "Pixel Art", "name": "You" },
+    { "role": "Music", "name": "Original" },
+    { "role": "Engineering", "name": "You" }
+  ]
+}

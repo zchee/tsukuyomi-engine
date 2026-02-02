@@ -1,7 +1,6 @@
 import Phaser from 'phaser'
 import { gradeFromAccuracy } from '../game/rhythm'
-import { getState, resetState } from '../game/state'
-import { clearProgress } from '../game/storage'
+import { getState } from '../game/state'
 
 export class EndingScene extends Phaser.Scene {
   constructor() {
@@ -49,7 +48,7 @@ export class EndingScene extends Phaser.Scene {
     })
 
     const restartText = this.add
-      .text(centerX, 150, 'Restart', {
+      .text(centerX, 150, 'Credits', {
         fontFamily: 'VT323',
         fontSize: '20px',
         color: '#7cf2b4',
@@ -58,9 +57,11 @@ export class EndingScene extends Phaser.Scene {
       .setInteractive({ useHandCursor: true })
 
     restartText.on('pointerdown', () => {
-      clearProgress()
-      resetState()
-      this.scene.start('TitleScene')
+      this.scene.start('CreditsScene')
+    })
+
+    this.input.keyboard?.once('keydown-ENTER', () => {
+      this.scene.start('CreditsScene')
     })
   }
 }
